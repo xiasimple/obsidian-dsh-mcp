@@ -1,0 +1,10 @@
+# 不要提交任何含密钥的本地覆盖文件
+.env
+*.local.yml
+cordis.local.patch.yml
+
+# 系统 / 编辑器
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

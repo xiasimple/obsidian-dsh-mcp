@@ -1,0 +1,17 @@
+# 追加到 DSH profile 的 cordis.patch.yml（顶层 YAML 数组）。
+# 每个 MCP server 一条 insert；改完触发 HMR，无需重启 DSH 进程。
+- insert:
+    - id: mcp-obsidian
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: obsidian
+        transport: stdio
+        command: npx
+        args: ['-y', 'obsidian-mcp-server@latest']
+        env:
+          MCP_TRANSPORT_TYPE: 'stdio'
+          # 从进程环境读取，避免把 key 写进仓库。
+          # 本地快速验证也可直接填字符串：OBSIDIAN_API_KEY: '你的key'
+          OBSIDIAN_API_KEY: !!js process.env.OBSIDIAN_API_KEY
+          # Local REST API 的 HTTPS 端口（自签名证书，默认关闭校验）。
+          OBSIDIAN_BASE_URL: 'https://127.0.0.1:27124'
