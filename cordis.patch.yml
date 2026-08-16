@@ -1,13 +1,21 @@
 # 追加到 DSH profile 的 cordis.patch.yml（顶层 YAML 数组）。
 # 每个 MCP server 一条 insert；改完触发 HMR，无需重启 DSH 进程。
+#
+# ⚠️ 不要用 npx 直接跑本 server：
+#   npx 每次启动都要重新校验 registry + 解析依赖树，首次冷启动动辄 1–5 分钟，
+#   超过 MCP SDK 的 60 秒 initialize 超时，连接永远成不上（表现为反复重连）。
+# 推荐：把 server 预装到一个稳定目录，用 node 直跑入口（启动 < 2 秒）。
+# 预装方法（在目标目录执行）：
+#   npm install obsidian-mcp-server
+# 然后把下面的 <SERVER_DIR> 换成 node_modules 所在的绝对路径。
 - insert:
     - id: mcp-obsidian
       name: '@deepseek-ai/dsh-mcp-client'
       config:
         serverName: obsidian
         transport: stdio
-        command: npx
-        args: ['-y', 'obsidian-mcp-server@latest']
+        command: node
+        args: ['<SERVER_DIR>/node_modules/obsidian-mcp-server/dist/index.js']
         env:
           MCP_TRANSPORT_TYPE: 'stdio'
           # 从进程环境读取，避免把 key 写进仓库。
@@ -15,3 +23,6 @@
           OBSIDIAN_API_KEY: !!js process.env.OBSIDIAN_API_KEY
           # Local REST API 的 HTTPS 端口（自签名证书，默认关闭校验）。
           OBSIDIAN_BASE_URL: 'https://127.0.0.1:27124'
+          OBSIDIAN_VERIFY_SSL: 'false'
+          # server 的日志目录（Node 模式下默认写进包目录，建议显式指定可写路径）
+          LOGS_DIR: '<SOME_WRITABLE_DIR>'

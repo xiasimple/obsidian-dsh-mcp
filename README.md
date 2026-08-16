@@ -41,7 +41,14 @@ Local REST API 插件设置页里会自动生成一个 API key（存在 vault �
 
 ### 3. 写入 DSH 配置
 
-把下面这段追加到你的 DSH profile 的 `cordis.patch.yml`（每个 MCP server 一条 `insert`）：
+**推荐：node 直跑（稳定）**。先把 server 预装到固定目录：
+
+```sh
+mkdir obsidian-mcp-server-local && cd obsidian-mcp-server-local
+npm install obsidian-mcp-server
+```
+
+然后把下面这段追加到你的 DSH profile 的 `cordis.patch.yml`（每个 MCP server 一条 `insert`）：
 
 ```yaml
 - insert:
@@ -50,16 +57,23 @@ Local REST API 插件设置页里会自动生成一个 API key（存在 vault �
       config:
         serverName: obsidian
         transport: stdio
-        command: npx
-        args: ['-y', 'obsidian-mcp-server@latest']
+        command: node
+        args: ['<绝对路径>/obsidian-mcp-server-local/node_modules/obsidian-mcp-server/dist/index.js']
         env:
           MCP_TRANSPORT_TYPE: 'stdio'
           # 推荐：从进程环境读取，不要把 key 写进仓库
           OBSIDIAN_API_KEY: !!js process.env.OBSIDIAN_API_KEY
           # Local REST API 的 HTTPS 端口（自签名证书，默认关闭校验）
           OBSIDIAN_BASE_URL: 'https://127.0.0.1:27124'
+          OBSIDIAN_VERIFY_SSL: 'false'
+          LOGS_DIR: '<可写目录>'
 ```
 
+> ⚠️ **不要用 `npx -y obsidian-mcp-server` 直跑**：npx 每次启动都要重新校验
+> registry 并解析依赖树，首次冷启动动辄 1–5 分钟，超过 MCP SDK 的 60 秒
+> initialize 超时，表现为 DSH 反复重连却永远连不上。用 `node` 直跑入口后启动
+> < 2 秒，稳定可靠。
+>
 > `OBSIDIAN_API_KEY` 两种填法二选一：
 > - **推荐**：在启动 DSH 前设置系统环境变量 `OBSIDIAN_API_KEY`，配置里用 `!!js process.env.OBSIDIAN_API_KEY` 读取；
 > - **本地快速验证**：直接把 key 字符串填进去（`OBSIDIAN_API_KEY: '你的key'`），**但千万别把这种文件提交到 Git**。
@@ -109,6 +123,15 @@ Local REST API 插件设置页里会自动生成一个 API key（存在 vault �
 - **不要把 `OBSIDIAN_API_KEY` 提交进 Git**；用环境变量注入。
 - Local REST API 使用自签名证书，`obsidian-mcp-server` 默认 `OBSIDIAN_VERIFY_SSL=false`，仅限本机 `127.0.0.1` 使用。
 - 需要时用 `OBSIDIAN_READ_ONLY` / `OBSIDIAN_READ_PATHS` / `OBSIDIAN_WRITE_PATHS` 收缩权限。
+
+## 排障
+
+| 现象 | 原因与处理 |
+|:-----|:-----|
+| DSH 反复重连、工具一直不出现在模型里 | 多半是 `npx` 冷启动超过 MCP 60 秒 initialize 超时；改用上文「node 直跑」方案（启动 <2s） |
+| server 已启动但调用工具报认证错误 | 检查 `OBSIDIAN_API_KEY` 是否与 Local REST API 插件设置页一致；插件重装会重新生成 key |
+| `OBSIDIAN_BASE_URL` 连不上 | 确认 Obsidian 正在运行且打开了该 vault；HTTPS 端口默认 `27124`，HTTP `27123` 需在插件里手动开启 |
+| 想启用命令面板工具 | 加环境变量 `OBSIDIAN_ENABLE_COMMANDS: 'true'`（会多出 `obsidian_list_commands` / `obsidian_execute_command`） |
 
 ## License
 
